@@ -178,6 +178,6 @@ return 0;
  module_exit(short_search_exit);
  
  
-MODULE_AUTHOR("Jens Axboe");
+MODULE_AUTHOR("Jacob Smith & Steven Silvers");
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("No-op IO scheduler");
+MODULE_DESCRIPTION("SSTF IO scheduler");
