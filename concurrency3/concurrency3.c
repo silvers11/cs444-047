@@ -28,7 +28,9 @@ struct list{
 //global variables
 
 //used as the locks in the various threads
-int num_searchers, num_inserters, num_deleters;
+int num_searchers;
+int num_inserters;
+int num_deleters;
 //the list being acted upon by the threads
 struct list the_list;
 
