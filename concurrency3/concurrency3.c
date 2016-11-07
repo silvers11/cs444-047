@@ -22,7 +22,7 @@ struct list{
 	int objects;
 	struct list_obj* head;
 	struct list_obj* current;
-}
+};
 
 
 //global variables
