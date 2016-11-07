@@ -138,7 +138,7 @@ void *deleter(void *item){
 	//check if requested delete exists on list
 	if(desired_ID > the_list.objects){
 		printf("the ID requested doesn't exist in list\n");
-		--deleters;
+		--num_deleters;
 		return;
 	}
 
