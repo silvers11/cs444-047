@@ -6,6 +6,7 @@
 #include<unistd.h>
 #include<pthread.h>
 #include<string.h>
+#include<signal.h>
 
 
 
@@ -39,11 +40,19 @@ struct list the_list;
 
 //functions
 
+
+//signal catcher
+void sig_catcher(int signal){
+	printf("signal caught\n");
+	kill(0, signal);
+	exit(0);
+}
+
 //searcher function, takes ID of desired object as argument
-void *searcher(void *item){
+void *searcher(){
 	//
 	struct list_obj *desired_obj = the_list.head;
-	int desired_ID = *((int *) item);
+	int desired_ID = 1;
 
 	//check for deleters
 	while(num_deleters != 0){
@@ -72,9 +81,12 @@ void *searcher(void *item){
 	return;
 }
 
-void *inserter(void){
-	struct list_obj new_obj;
+void inserter(void){
+	the_list.current = the_list.head;
+	struct list_obj* new_obj = (struct list_obj*) malloc(sizeof(struct list_obj));
+	new_obj->next = NULL;
 
+	struct list_obj* temp = the_list.head;
 	//wait for active inserters and deleters to exit
 	while(num_deleters != 0 && num_inserters != 0){
 		printf("waiting for inserts and deletes to exit\n");
@@ -85,32 +97,36 @@ void *inserter(void){
 	printf("Insert has begun\n");
 	++num_inserters;
 	the_list.objects = the_list.objects + 1;
-	new_obj.object_ID = the_list.objects;
+	new_obj->object_ID = the_list.objects;
+	new_obj->next = NULL;
 
-
+	printf("find end of list\n");
 	//find the end of the list
-	while(the_list.current->next != NULL){
-		the_list.current = the_list.current->next;
+	int i;
+	while(temp != NULL){
+		printf("looping through list\n");
+		temp = temp->next;
 	}
 
+
+	printf("add new object\n");
 	//add new object to end of list
-	the_list.current->next = &new_obj;
-	the_list.current = the_list.current->next;
-	the_list.current->next = NULL;
+	the_list.current->next = new_obj;
+	printf("debug1\n");
 
 
-	printf("New item %d added to list\n",new_obj.object_ID );
-
+	//printf("New item %d added to list\n",new_obj.object_ID );
+	printf("insert finished\n");
 	--num_inserters;
 	return;
 }
 
 
-void *deleter(void *item){
-
+void *deleter(){
+	printf("delete called\n");
 	struct list_obj *obj_to_del = the_list.head;
 	struct list_obj *temp;
-	int desired_ID = *((int *) item);
+	int desired_ID = 1;
 
 	//wait for active deletes
 	while(num_deleters != 0){
@@ -173,11 +189,19 @@ void *deleter(void *item){
 
 int main(){
 
+	struct sigaction signal;
+	sigemptyset(&signal.sa_mask);
+	signal.sa_flags = 0;
+	signal.sa_handler = sig_catcher;
+	sigaction(SIGSEGV, &signal, NULL);
+
+	void *insertion = inserter;
 	//initialize list
 	struct list_obj init_head;
 	init_head.next = NULL;
 	init_head.object_ID = 0;
 	the_list.head = &init_head;
+	the_list.current = the_list.head;
 
 	num_deleters = 0;
 	num_inserters = 0;
@@ -185,24 +209,24 @@ int main(){
 
 	//create threads
 	pthread_t thread0, thread1, thread2, thread3, thread4;
-	int *i = malloc(sizeof(*i));
-	i = 2;
-	pthread_create(&thread0, NULL, inserter, NULL);
+	printf("making threads\n");
+	
+	pthread_create(&thread0, NULL, insertion, NULL);
 	pthread_create(&thread1, NULL, inserter, NULL);
-	pthread_create(&thread2, 0, searcher, (void *) i);
-	pthread_create(&thread3, 0, deleter, (void *) i);
-	pthread_create(&thread4, 0, searcher, (void *) i);
+	pthread_create(&thread2, 0, searcher, NULL);
+	pthread_create(&thread3, 0, deleter, NULL);
+	pthread_create(&thread4, 0, searcher, NULL);
 
+	printf("threads created\n");
+	
 	pthread_join(thread0,NULL);
 	pthread_join(thread1,NULL);
 	pthread_join(thread2,NULL);
 	pthread_join(thread3,NULL);
 	pthread_join(thread4,NULL);
 
+	printf("threads joined\n");
 
 
-	//run forever
-	for(;;){
-
-	}
+for(;;);
 }
