@@ -1,3 +1,6 @@
+//Kernel project 3 for Steven Silvers and Jake Smith
+//Our block driver is based on the following SBD
+
 /*
  * A sample, extra-simple block driver. Updated for kernel 2.6.31.
  *
@@ -18,10 +21,18 @@
 #include <linux/genhd.h>
 #include <linux/blkdev.h>
 #include <linux/hdreg.h>
+#include <linux/crypto.h> //needed for cryptography
 
 MODULE_LICENSE("Dual BSD/GPL");
 static char *Version = "1.4";
 
+
+//variables needed for crypo
+static char *key = "testingkey";
+static int key_length = 10;
+struct crypto_cipher *cipher;
+
+//included with sbd
 static int major_num = 0;
 module_param(major_num, int, 0);
 static int logical_block_size = 512;
@@ -29,11 +40,14 @@ module_param(logical_block_size, int, 0);
 static int nsectors = 1024; /* How big the drive is */
 module_param(nsectors, int, 0);
 
+
+
 /*
  * We can tweak our hardware sector size, but the kernel talks to us
  * in terms of small sectors, always.
  */
 #define KERNEL_SECTOR_SIZE 512
+
 
 /*
  * Our request queue.
@@ -57,15 +71,63 @@ static void sbd_transfer(struct sbd_device *dev, sector_t sector,
 		unsigned long nsect, char *buffer, int write) {
 	unsigned long offset = sector * logical_block_size;
 	unsigned long nbytes = nsect * logical_block_size;
+	int i;
+	u8 *destination;
+	u8 *source;
+
+
+	//setup crypto
+	crypto_cipher_setkey(cipher, key, key_length);
+
 
 	if ((offset + nbytes) > dev->size) {
 		printk (KERN_NOTICE "sbd: Beyond-end write (%ld %ld)\n", offset, nbytes);
 		return;
 	}
-	if (write)
-		memcpy(dev->data + offset, buffer, nbytes);
-	else
-		memcpy(buffer, dev->data + offset, nbytes);
+	if (write){
+
+		source = buffer;
+		destination = dev->data + offset;
+		//memcpy(dev->data + offset, buffer, nbytes);
+
+		//encryption
+		for(i = 0; i < nbytes; i += crypto_cipher_blocksize(cipher)){
+			crypto_cipher_encrypt_one(cipher, destination + i, source + i);
+		}
+
+		//print statements for debug and testing
+		printk("encrypted \n");
+		for(i = 0; i < nbytes; i++){
+			printk("%u", (unsigned) *destination);
+		}
+
+		printk("decrypted \n");
+		for(i = 0; i < nbytes; i++){
+			printk("%u", (unsigned) *source++);
+		}
+
+	}
+	else{
+		//memcpy(buffer, dev->data + offset, nbytes);
+		source = dev->data + offset;
+		destination = buffer;
+
+		//decryption
+		for(i = 0; i < nbytes; i += crypto_cipher_blocksize(cipher)){
+			crypto_cipher_decrypt_one(cipher, destination + i, source + i);
+		}
+
+		//print statements for debug and testing
+		printk("encrypted \n");
+		for(i = 0; i < nbytes; i++){
+			printk("%u", (unsigned) *destination);
+		}
+
+		printk("decrypted \n");
+		for(i = 0; i < nbytes; i++){
+			printk("%u", (unsigned) *source++);
+		}
+	}
 }
 
 static void sbd_request(struct request_queue *q) {
