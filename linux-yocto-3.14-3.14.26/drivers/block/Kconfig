@@ -18,6 +18,9 @@ if BLK_DEV
 config BLK_DEV_NULL_BLK
 	tristate "Null test block driver"
 
+config CRYPTO_RAM_DISK
+       tristate "CS444 Project 3"
+
 config BLK_DEV_FD
 	tristate "Normal floppy disk support"
 	depends on ARCH_MAY_HAVE_PC_FDC
